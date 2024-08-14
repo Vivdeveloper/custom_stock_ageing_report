@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include custom_stock_ageing_report *.css
+recursive-include custom_stock_ageing_report *.csv
+recursive-include custom_stock_ageing_report *.html
+recursive-include custom_stock_ageing_report *.ico
+recursive-include custom_stock_ageing_report *.js
+recursive-include custom_stock_ageing_report *.json
+recursive-include custom_stock_ageing_report *.md
+recursive-include custom_stock_ageing_report *.png
+recursive-include custom_stock_ageing_report *.py
+recursive-include custom_stock_ageing_report *.svg
+recursive-include custom_stock_ageing_report *.txt
+recursive-exclude custom_stock_ageing_report *.pyc
