@@ -55,6 +55,11 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
             "item_code": details.name
         }, "price_list_rate")
 
+		valuation_rate = frappe.db.get_value("Bin", {
+            "item_code": details.name,
+            "warehouse": details.warehouse
+        }, "valuation_rate")
+
 		row = [details.name, details.item_name, details.description, details.item_group, details.brand]
 
 		if filters.get("show_warehouse_wise_stock"):
@@ -64,6 +69,7 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
 			[
 				flt(item_dict.get("total_qty"), precision),
 				price_list_rate if price_list_rate else 0.0,
+				valuation_rate if valuation_rate else 0.0,
 				average_age,
 				range1,
 				range2,
@@ -161,6 +167,7 @@ def get_columns(filters: Filters) -> List[Dict]:
 		[
 			{"label": _("Available Qty"), "fieldname": "qty", "fieldtype": "Float", "width": 100},
 			{"label": _("Price List Rate"), "fieldname": "price_list_rate", "fieldtype": "Currency", "width": 120},
+			{"label": _("Valuation Rate"), "fieldname": "val_rate", "fieldtype": "Currency", "width": 120},
 			{"label": _("Average Age"), "fieldname": "average_age", "fieldtype": "Float", "width": 100},
 		]
 	)
