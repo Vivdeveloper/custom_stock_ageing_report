@@ -71,7 +71,7 @@ frappe.query_reports["Custom stock ageing"] = {
             "fieldname": "show_warehouse_wise_stock",
             "label": __("Show Warehouse-wise Stock"),
             "fieldtype": "Check",
-            "default": 0
+            "default": 1
         },
 		{
             "fieldname": "price_list",
