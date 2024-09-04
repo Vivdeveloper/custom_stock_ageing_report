@@ -60,7 +60,14 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
             "warehouse": details.warehouse
         }, "valuation_rate")
 
+		
+
 		bal_val = flt(item_dict.get("total_qty"), precision) * (valuation_rate if valuation_rate else 0.0)
+
+		bal_val_range1 = range1 * (valuation_rate if valuation_rate else 0.0)
+		bal_val_range2 = range2 * (valuation_rate if valuation_rate else 0.0)
+		bal_val_range3 = range3 * (valuation_rate if valuation_rate else 0.0)
+		bal_val_above_range3 = above_range3 * (valuation_rate if valuation_rate else 0.0)
 
 		row = [details.name, details.item_name, details.description, details.item_group, details.brand]
 
@@ -72,12 +79,17 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
 				flt(item_dict.get("total_qty"), precision),
 				price_list_rate if price_list_rate else 0.0,
 				valuation_rate if valuation_rate else 0.0,
+				# bal_val_range1 + bal_val_range2 + bal_val_range3 + bal_val_above_range3,  # Total Balance Value	
 				bal_val,
 				average_age,
 				range1,
 				range2,
 				range3,
 				above_range3,
+				bal_val_range1,
+                bal_val_range2,
+                bal_val_range3,
+                bal_val_above_range3,
 				earliest_age,
 				latest_age,
 				details.stock_uom,
@@ -178,6 +190,10 @@ def get_columns(filters: Filters) -> List[Dict]:
 	columns.extend(range_columns)
 	columns.extend(
 		[
+			{"label": _("Balance (0-30)"), "fieldname": "bal_val_range1", "fieldtype": "Currency", "width": 120},
+            {"label": _("Balance (31-60)"), "fieldname": "bal_val_range2", "fieldtype": "Currency", "width": 120},
+            {"label": _("Balance (61-90)"), "fieldname": "bal_val_range3", "fieldtype": "Currency", "width": 120},
+            {"label": _("Balance (91-Above)"), "fieldname": "bal_val_above_range3", "fieldtype": "Currency", "width": 160},
 			{"label": _("Earliest"), "fieldname": "earliest", "fieldtype": "Int", "width": 80},
 			{"label": _("Latest"), "fieldname": "latest", "fieldtype": "Int", "width": 80},
 			{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 100},
