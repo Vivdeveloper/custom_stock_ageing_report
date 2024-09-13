@@ -83,12 +83,12 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
 				bal_val,
 				average_age,
 				range1,
-				range2,
-				range3,
-				above_range3,
 				bal_val_range1,
-                bal_val_range2,
-                bal_val_range3,
+				range2,
+				bal_val_range2,
+				range3,
+				bal_val_range3,
+				above_range3,
                 bal_val_above_range3,
 				earliest_age,
 				latest_age,
@@ -187,13 +187,25 @@ def get_columns(filters: Filters) -> List[Dict]:
 			{"label": _("Average Age"), "fieldname": "average_age", "fieldtype": "Float", "width": 100},
 		]
 	)
-	columns.extend(range_columns)
+
+	age_balance_columns = []
+	for age_col, bal_col in zip(range_columns, [
+        {"label": _("Balance Valuation 1"), "fieldname": "bal_val_range1", "fieldtype": "Currency", "width": 120},
+        {"label": _("Balance Valuation 2"), "fieldname": "bal_val_range2", "fieldtype": "Currency", "width": 120},
+        {"label": _("Balance Valuation 3"), "fieldname": "bal_val_range3", "fieldtype": "Currency", "width": 120},
+        {"label": _("Balance Valuation 4"), "fieldname": "bal_val_above_range3", "fieldtype": "Currency", "width": 120},
+    ]):
+		age_balance_columns.extend([age_col, bal_col])
+    
+	columns.extend(age_balance_columns)
+
+	# columns.extend(range_columns)
 	columns.extend(
 		[
-			{"label": _("Balance (0-30)"), "fieldname": "bal_val_range1", "fieldtype": "Currency", "width": 120},
-            {"label": _("Balance (31-60)"), "fieldname": "bal_val_range2", "fieldtype": "Currency", "width": 120},
-            {"label": _("Balance (61-90)"), "fieldname": "bal_val_range3", "fieldtype": "Currency", "width": 120},
-            {"label": _("Balance (91-Above)"), "fieldname": "bal_val_above_range3", "fieldtype": "Currency", "width": 160},
+			# {"label": _("Balance (0-30)"), "fieldname": "bal_val_range1", "fieldtype": "Currency", "width": 120},
+            # {"label": _("Balance (31-60)"), "fieldname": "bal_val_range2", "fieldtype": "Currency", "width": 120},
+            # {"label": _("Balance (61-90)"), "fieldname": "bal_val_range3", "fieldtype": "Currency", "width": 120},
+            # {"label": _("Balance (91-Above)"), "fieldname": "bal_val_above_range3", "fieldtype": "Currency", "width": 160},
 			{"label": _("Earliest"), "fieldname": "earliest", "fieldtype": "Int", "width": 80},
 			{"label": _("Latest"), "fieldname": "latest", "fieldtype": "Int", "width": 80},
 			{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 100},
