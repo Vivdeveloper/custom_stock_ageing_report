@@ -11,11 +11,10 @@
 	<h2 class="text-center" style="margin-top:0">{%= __(report.report_name) %}</h2>
 	<h4 class="text-center">
 		{% if (filters.party) { %}
-        	{% var customer_name = frappe.db.get_value('Customer', filters.party, 'customer_name'); %}
-        	{%= customer_name %}
-    	{% } %}
+		{{ filters.party.customer_name }}
+			{% } %}
 	</h4>
-	
+
 	<h6 class="text-center">
 			{% if (filters.tax_id) { %}
 			{%= __("Tax Id: ")%}	{%= filters.tax_id %}

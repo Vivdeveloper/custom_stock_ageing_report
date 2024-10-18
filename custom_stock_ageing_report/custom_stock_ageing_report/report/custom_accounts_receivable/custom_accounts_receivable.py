@@ -1199,3 +1199,4 @@ def get_customer_group_with_children(customer_groups):
 			frappe.throw(_("Customer Group: {0} does not exist").format(d))
 
 	return list(set(all_customer_groups))
+
