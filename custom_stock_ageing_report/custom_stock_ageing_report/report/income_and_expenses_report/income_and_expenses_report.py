@@ -1,12 +1,12 @@
 import frappe
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # Corrected import
 
 def execute(filters=None):
-    columns, branch_list = get_columns(filters)
+    columns, branch_list = get_columns()
     data = get_data(filters, branch_list)
     return columns, data
 
-def get_columns(filters):
+def get_columns():
     # Fetch distinct branch names from GL Entry
     branch_query = """
         SELECT DISTINCT branch 
@@ -14,23 +14,21 @@ def get_columns(filters):
         WHERE branch IS NOT NULL
     """
     branches = frappe.db.sql(branch_query, as_list=True)
-
     branch_list = [branch[0] for branch in branches]  # Flatten the list
 
-    # Standard columns
+    # Define columns
     columns = [
         {"label": "Account", "fieldname": "account", "fieldtype": "Link", "options": "Account", "width": 300},
-        {"label": "Account Type", "fieldname": "root_type", "fieldtype": "Data", "width": 150},
-        {"label": "Posting Date", "fieldname": "posting_date", "fieldtype": "Date", "width": 120}
+        {"label": "Account Type", "fieldname": "root_type", "fieldtype": "Data", "width": 150}
     ]
 
-    # Dynamically add columns for each branch
+    # Dynamically add debit/credit columns for each branch
     for branch in branch_list:
         columns.append({"label": f"{branch} Debit", "fieldname": f"{branch.lower()}_debit", "fieldtype": "Currency", "width": 150})
         columns.append({"label": f"{branch} Credit", "fieldname": f"{branch.lower()}_credit", "fieldtype": "Currency", "width": 150})
 
     return columns, branch_list
-
+    
 def get_data(filters, branch_list):
     if not filters.get("from_date") or (filters.get("monthwise") and not filters.get("to_date")):
         frappe.throw("Please select appropriate filters for From Date and To Date.")
@@ -49,15 +47,14 @@ def get_data(filters, branch_list):
     elif filters.get("frequency") == "Yearly":
         conditions += " AND YEAR(gle.posting_date) = YEAR(%(from_date)s)"
 
-    # Query to fetch data for each account and branch
+    # Query to fetch data grouped by account and branch
     query = """
         SELECT 
             gle.branch, 
             gle.account, 
             a.root_type, 
-            gle.posting_date, 
-            gle.debit, 
-            gle.credit
+            SUM(gle.debit) AS debit, 
+            SUM(gle.credit) AS credit
         FROM 
             `tabGL Entry` gle
         JOIN 
@@ -65,29 +62,30 @@ def get_data(filters, branch_list):
         WHERE 
             a.root_type IN ('Income', 'Expense')
             {conditions}
+        GROUP BY 
+            gle.account, gle.branch
         ORDER BY 
-            gle.posting_date ASC
+            gle.account ASC
     """.format(conditions=conditions)
 
     results = frappe.db.sql(query, filters, as_dict=True)
 
-    # Initialize data with account and posting date, and blank debit/credit columns for each branch
+    # Initialize data with account and blank debit/credit columns for each branch
     data_dict = {}
-    
-    for row in results:
-        key = (row['account'], row['posting_date'])  # Unique key for each account and posting date
 
-        if key not in data_dict:
+    for row in results:
+        account_key = row['account']  # Unique key for each account
+
+        if account_key not in data_dict:
             # Initialize a new row with default values
-            data_dict[key] = {
+            data_dict[account_key] = {
                 "account": row['account'],
-                "root_type": row['root_type'],
-                "posting_date": row['posting_date']
+                "root_type": row['root_type']
             }
-            # Initialize blank debit/credit values for all branches
+            # Initialize debit/credit values for all branches
             for branch in branch_list:
-                data_dict[key][f"{branch.lower()}_debit"] = 0
-                data_dict[key][f"{branch.lower()}_credit"] = 0
+                data_dict[account_key][f"{branch.lower()}_debit"] = 0
+                data_dict[account_key][f"{branch.lower()}_credit"] = 0
 
         # Check if branch exists before proceeding
         if row['branch']:
@@ -95,8 +93,8 @@ def get_data(filters, branch_list):
             branch_key_credit = f"{row['branch'].lower()}_credit"
 
             # Populate debit/credit values for the specific branch
-            data_dict[key][branch_key_debit] += row['debit']
-            data_dict[key][branch_key_credit] += row['credit']
+            data_dict[account_key][branch_key_debit] += row['debit']
+            data_dict[account_key][branch_key_credit] += row['credit']
 
     # Convert data dictionary to a list
     data = list(data_dict.values())
