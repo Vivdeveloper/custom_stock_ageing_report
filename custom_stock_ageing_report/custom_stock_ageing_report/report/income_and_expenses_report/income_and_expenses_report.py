@@ -22,10 +22,11 @@ def get_columns():
         {"label": "Account Type", "fieldname": "root_type", "fieldtype": "Data", "width": 150}
     ]
 
-    # Dynamically add debit/credit columns for each branch
+    # Dynamically add debit/credit/amount columns for each branch
     for branch in branch_list:
         columns.append({"label": f"{branch} Debit", "fieldname": f"{branch.lower()}_debit", "fieldtype": "Currency", "width": 150})
         columns.append({"label": f"{branch} Credit", "fieldname": f"{branch.lower()}_credit", "fieldtype": "Currency", "width": 150})
+        columns.append({"label": f"{branch} Amount", "fieldname": f"{branch.lower()}_amount", "fieldtype": "Currency", "width": 150})
 
     return columns, branch_list
 
@@ -70,10 +71,11 @@ def get_data(filters, branch_list):
 
     results = frappe.db.sql(query, filters, as_dict=True)
 
-    # Initialize data with account and blank debit/credit columns for each branch
+    # Initialize data with account and blank debit/credit/amount columns for each branch
     data_dict = {}
     totals = {f"{branch.lower()}_debit": 0 for branch in branch_list}
     totals.update({f"{branch.lower()}_credit": 0 for branch in branch_list})
+    totals.update({f"{branch.lower()}_amount": 0 for branch in branch_list})
 
     for row in results:
         account_key = row['account']  # Unique key for each account
@@ -84,23 +86,27 @@ def get_data(filters, branch_list):
                 "account": row['account'],
                 "root_type": row['root_type']
             }
-            # Initialize debit/credit values for all branches
+            # Initialize debit/credit/amount values for all branches
             for branch in branch_list:
                 data_dict[account_key][f"{branch.lower()}_debit"] = 0
                 data_dict[account_key][f"{branch.lower()}_credit"] = 0
+                data_dict[account_key][f"{branch.lower()}_amount"] = 0
 
         # Check if branch exists before proceeding
         if row['branch']:
             branch_key_debit = f"{row['branch'].lower()}_debit"
             branch_key_credit = f"{row['branch'].lower()}_credit"
+            branch_key_amount = f"{row['branch'].lower()}_amount"
 
             # Populate debit/credit values for the specific branch
             data_dict[account_key][branch_key_debit] += row['debit']
             data_dict[account_key][branch_key_credit] += row['credit']
+            data_dict[account_key][branch_key_amount] = data_dict[account_key][branch_key_debit] + data_dict[account_key][branch_key_credit]
 
             # Add to the totals
             totals[branch_key_debit] += row['debit']
             totals[branch_key_credit] += row['credit']
+            totals[branch_key_amount] += row['debit'] + row['credit']
 
     # Convert data dictionary to a list
     data = list(data_dict.values())
