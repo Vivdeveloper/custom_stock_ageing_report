@@ -1,5 +1,5 @@
 import frappe
-from datetime import datetime, timedelta  # Corrected import
+from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns, branch_list = get_columns()
@@ -28,7 +28,7 @@ def get_columns():
         columns.append({"label": f"{branch} Credit", "fieldname": f"{branch.lower()}_credit", "fieldtype": "Currency", "width": 150})
 
     return columns, branch_list
-    
+
 def get_data(filters, branch_list):
     if not filters.get("from_date") or (filters.get("monthwise") and not filters.get("to_date")):
         frappe.throw("Please select appropriate filters for From Date and To Date.")
@@ -72,6 +72,8 @@ def get_data(filters, branch_list):
 
     # Initialize data with account and blank debit/credit columns for each branch
     data_dict = {}
+    totals = {f"{branch.lower()}_debit": 0 for branch in branch_list}
+    totals.update({f"{branch.lower()}_credit": 0 for branch in branch_list})
 
     for row in results:
         account_key = row['account']  # Unique key for each account
@@ -96,7 +98,16 @@ def get_data(filters, branch_list):
             data_dict[account_key][branch_key_debit] += row['debit']
             data_dict[account_key][branch_key_credit] += row['credit']
 
+            # Add to the totals
+            totals[branch_key_debit] += row['debit']
+            totals[branch_key_credit] += row['credit']
+
     # Convert data dictionary to a list
     data = list(data_dict.values())
+
+    # Append the summary row
+    summary_row = {"account": "Total", "root_type": ""}
+    summary_row.update(totals)
+    data.append(summary_row)
 
     return data
