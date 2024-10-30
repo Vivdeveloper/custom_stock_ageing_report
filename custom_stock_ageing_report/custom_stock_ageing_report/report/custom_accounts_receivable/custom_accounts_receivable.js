@@ -54,9 +54,33 @@ frappe.query_reports["Custom Accounts Receivable"] = {
 			},
 		},
 		{
+            fieldname: "customer_name",
+            label: __("customer_name"),
+            fieldtype: "Data",
+            read_only: 1,
+			hidden: 1
+        },
+		{
 			fieldname: "party",
 			label: __("Party"),
 			fieldtype: "MultiSelectList",
+			on_change: function() {
+                // Fetch territory when customer changes
+                const customer = frappe.query_report.get_filter_value("party");
+                console.log("customer--------------------",customer[0])
+                if (customer) {
+					
+                    frappe.db.get_value("Customer", customer[0], "customer_name", (r) => {
+                        if (r && r.customer_name) {
+							console.log("--------------------------",r.customer_name)
+                            frappe.query_report.set_filter_value("customer_name", r.customer_name);
+                        }
+                    });
+                } else {
+                    // Clear territory field if no customer is selected
+                    frappe.query_report.set_filter_value("customer_name", "");
+                }
+            },
 			get_data: function (txt) {
 				if (!frappe.query_report.filters) return;
 
@@ -64,8 +88,9 @@ frappe.query_reports["Custom Accounts Receivable"] = {
 				if (!party_type) return;
 
 				return frappe.db.get_link_options(party_type, txt);
-			},
+			}
 		},
+		
 		{
 			fieldname: "party_account",
 			label: __("Receivable Account"),

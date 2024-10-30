@@ -10,9 +10,9 @@
 
 	<h2 class="text-center" style="margin-top:0">{%= __(report.report_name) %}</h2>
 	<h4 class="text-center">
-		{% if customer %}
-        	{%= __("Customer Name: ") %} {%= party_details.customer_name %}
-    	{% endif %}
+		{% if (filters.customer_name) { %}
+				{%= filters.customer_name %}
+			{% } %}
 	</h4>
 
 	

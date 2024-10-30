@@ -1200,8 +1200,8 @@ def get_customer_group_with_children(customer_groups):
 
 	return list(set(all_customer_groups))
 
-def get_customer_name_by_party(self):
-    customer = None  
-    if self.filters.party:
-        customer = frappe.db.get_value("Customer", {"party": self.filters.party}, "customer_name")
-    return customer
+# def get_customer_name_by_party(self):
+#     customer = None  
+#     if self.filters.party:
+#         customer = frappe.db.get_value("Customer", {"party": self.filters.party}, "customer_name")
+#     return customer
