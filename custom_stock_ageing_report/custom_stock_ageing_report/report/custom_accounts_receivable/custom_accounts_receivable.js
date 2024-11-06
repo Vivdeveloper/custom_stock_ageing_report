@@ -60,6 +60,7 @@ frappe.query_reports["Custom Accounts Receivable"] = {
             read_only: 1,
 			hidden: 1
         },
+		
 		{
 			fieldname: "party",
 			label: __("Party"),
