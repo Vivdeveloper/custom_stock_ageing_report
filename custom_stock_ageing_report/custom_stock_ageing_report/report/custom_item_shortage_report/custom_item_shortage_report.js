@@ -22,5 +22,14 @@ frappe.query_reports["Custom Item Shortage Report"] = {
 				return frappe.db.get_link_options("Warehouse", txt);
 			},
 		},
+		{
+			fieldname: "item_group",
+			label: __("Item Group"),
+			fieldtype: "MultiSelectList",
+			width: "100",
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Item Group", txt);
+			},
+		},
 	],
 };

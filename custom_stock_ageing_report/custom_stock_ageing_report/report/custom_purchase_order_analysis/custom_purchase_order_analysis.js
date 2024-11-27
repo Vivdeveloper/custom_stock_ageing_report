@@ -72,6 +72,12 @@ frappe.query_reports["Custom Purchase Order Analysis"] = {
 			fieldtype: "Check",
 			default: 0,
 		},
+		{
+			fieldname: "group_by_supplier",
+			label: __("Group by Supplier"),
+			fieldtype: "Check",
+			default: 0,
+		},
 	],
 
 	formatter: function (value, row, column, data, default_formatter) {

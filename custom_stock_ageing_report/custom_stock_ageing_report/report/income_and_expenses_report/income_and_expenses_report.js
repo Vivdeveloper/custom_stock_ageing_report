@@ -1,10 +1,11 @@
 frappe.query_reports["Income and Expenses Report"] = {
 	"filters": [
+		{"fieldname": "company", "label": "Company", "fieldtype": "Link", "options": "Company", "reqd": 1},
 		{
 			"fieldname": "from_date",
 			"label": "From Date",
 			"fieldtype": "Date",
-			"default": "2023-01-01",
+			"default": "2024-01-01",
 			"reqd": 1
 		},
 		{
@@ -28,9 +29,7 @@ frappe.query_reports["Income and Expenses Report"] = {
 			"fieldtype": "Check",
 			"default": 0,
 			"on_change": function() {
-				
 				let monthwise_checked = frappe.query_report.get_filter_value('monthwise');
-				
 				if (monthwise_checked) {
 					frappe.query_report.toggle_filter_display('to_date', true);
 					frappe.query_report.set_filter_value('frequency', 'Monthly');
