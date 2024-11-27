@@ -117,20 +117,22 @@ def get_data(filters, branch_list):
         if not account["parent_account"]:
             aggregate_values(account["account"])
 
-    # Build tree data
+    # Build tree data (only include accounts with non-zero values)
     def build_tree(parent, indent=0):
         children = [account for account in account_dict.values() if account["parent_account"] == parent]
         tree_data = []
         for child in sorted(children, key=lambda x: x["account"]):
-            child["indent"] = indent
-            tree_data.append(child)
-            if child["is_group"]:
-                tree_data.extend(build_tree(child["account"], indent + 1))
+            # Only include child accounts with non-zero total or branch amounts
+            if child["total_amount"] != 0 or any(child.get(f"{branch.lower()}_amount", 0) != 0 for branch in branch_list):
+                child["indent"] = indent
+                tree_data.append(child)
+                if child["is_group"]:
+                    tree_data.extend(build_tree(child["account"], indent + 1))
         return tree_data
 
     data = build_tree(None)
 
-        # Initialize the total row with income - expense calculation for each branch
+    # Initialize the total row with income - expense calculation for each branch
     totals = {"account": "Total", "total_amount": 0}
     for branch in branch_list:
         branch_key = f"{branch.lower()}_amount"
@@ -142,18 +144,18 @@ def get_data(filters, branch_list):
             for branch in branch_list:
                 branch_key = f"{branch.lower()}_amount"
                 if branch_key in row:
-                    totals[branch_key] += row[branch_key]
+                    totals[branch_key] += row.get(branch_key, 0)
             totals["total_amount"] += row["total_amount"]
 
     # Adjust the totals to calculate overall total as income - expense
     for branch in branch_list:
         branch_income_total = sum(
-            row[f"{branch.lower()}_amount"]
+            row.get(f"{branch.lower()}_amount", 0)
             for row in data
             if not row["is_group"] and account_dict[row["account"]]["root_type"] == "Income"
         )
         branch_expense_total = sum(
-            row[f"{branch.lower()}_amount"]
+            row.get(f"{branch.lower()}_amount", 0)
             for row in data
             if not row["is_group"] and account_dict[row["account"]]["root_type"] == "Expense"
         )
@@ -182,4 +184,3 @@ def get_data(filters, branch_list):
     data.append(totals)
 
     return data
-
