@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 import frappe
+from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns, branch_list = get_columns(filters)
@@ -84,16 +84,11 @@ def get_data(filters, branch_list):
         for branch in branch_list:
             account[f"{branch.lower()}_amount"] = 0
 
-    # Process results and calculate branch totals
     for row in results:
         account = account_dict.get(row["account"])
         if account:
             branch_key = f"{row['branch'].lower()}_amount" if row["branch"] else None
-            # Adjust the amount based on whether it's Income or Expense
-            if account["root_type"] == "Income":
-                branch_amount = row["credit"] - row["debit"]  # Income: credit - debit
-            else:
-                branch_amount = row["debit"] - row["credit"]  # Expense: debit - credit
+            branch_amount = row["debit"] - row["credit"]
             
             if branch_key:
                 account[branch_key] += branch_amount
@@ -117,70 +112,24 @@ def get_data(filters, branch_list):
         if not account["parent_account"]:
             aggregate_values(account["account"])
 
-    # Build tree data (only include accounts with non-zero values)
     def build_tree(parent, indent=0):
         children = [account for account in account_dict.values() if account["parent_account"] == parent]
         tree_data = []
         for child in sorted(children, key=lambda x: x["account"]):
-            # Only include child accounts with non-zero total or branch amounts
-            if child["total_amount"] != 0 or any(child.get(f"{branch.lower()}_amount", 0) != 0 for branch in branch_list):
-                child["indent"] = indent
-                tree_data.append(child)
-                if child["is_group"]:
-                    tree_data.extend(build_tree(child["account"], indent + 1))
+            child["indent"] = indent
+            tree_data.append(child)
+            if child["is_group"]:
+                tree_data.extend(build_tree(child["account"], indent + 1))
         return tree_data
 
     data = build_tree(None)
 
-    # Initialize the total row with income - expense calculation for each branch
     totals = {"account": "Total", "total_amount": 0}
     for branch in branch_list:
         branch_key = f"{branch.lower()}_amount"
-        totals[branch_key] = 0
+        totals[branch_key] = sum(row.get(branch_key, 0) for row in data if not row["is_group"])
+        totals["total_amount"] += totals[branch_key]
 
-    # Calculate totals for each branch and overall total
-    for row in data:
-        if not row["is_group"]:
-            for branch in branch_list:
-                branch_key = f"{branch.lower()}_amount"
-                if branch_key in row:
-                    totals[branch_key] += row.get(branch_key, 0)
-            totals["total_amount"] += row["total_amount"]
-
-    # Adjust the totals to calculate overall total as income - expense
-    for branch in branch_list:
-        branch_income_total = sum(
-            row.get(f"{branch.lower()}_amount", 0)
-            for row in data
-            if not row["is_group"] and account_dict[row["account"]]["root_type"] == "Income"
-        )
-        branch_expense_total = sum(
-            row.get(f"{branch.lower()}_amount", 0)
-            for row in data
-            if not row["is_group"] and account_dict[row["account"]]["root_type"] == "Expense"
-        )
-        
-        # Update the total for each branch as income - expense
-        branch_key = f"{branch.lower()}_amount"
-        totals[branch_key] = branch_income_total - branch_expense_total
-
-    # Adjust overall total as income - expense
-    income_total = sum(
-        row["total_amount"]
-        for row in data
-        if not row["is_group"] and account_dict[row["account"]]["root_type"] == "Income"
-    )
-
-    expense_total = sum(
-        row["total_amount"]
-        for row in data
-        if not row["is_group"] and account_dict[row["account"]]["root_type"] == "Expense"
-    )
-
-    # Final overall total as income - expense
-    totals["total_amount"] = income_total - expense_total
-
-    # Add totals to the data
     data.append(totals)
 
     return data
