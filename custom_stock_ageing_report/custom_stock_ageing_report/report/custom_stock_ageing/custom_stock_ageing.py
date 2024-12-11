@@ -25,7 +25,7 @@ def execute(filters: Filters = None) -> Tuple:
 
 	return columns, data, None, chart_data
 
-
+@frappe.whitelist()
 def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> List[Dict]:
 	"Returns ordered, formatted data with ranges."
 	_func = itemgetter(1)

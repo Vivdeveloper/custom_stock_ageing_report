@@ -1,6 +1,9 @@
 import frappe
 from frappe import _
 
+from collections import defaultdict
+
+
 def execute(filters=None):
     columns = get_columns()
     data = get_data(filters)
@@ -19,7 +22,6 @@ def get_data(filters):
     poi = frappe.qb.DocType("Purchase Order Item")
     po = frappe.qb.DocType("Purchase Order")
 
-    # Add backorder_qty calculation in the query
     query = (
         frappe.qb.from_(bin)
         .left_join(wh).on(wh.name == bin.warehouse)
@@ -31,6 +33,7 @@ def get_data(filters):
             bin.item_code,
             bin.actual_qty,
             bin.ordered_qty,
+            (bin.ordered_qty - (poi.received_qty - poi.returned_qty)).as_("backorder_qty"),
             bin.planned_qty,
             bin.reserved_qty,
             bin.reserved_qty_for_production,
@@ -39,9 +42,6 @@ def get_data(filters):
             item.item_name,
             item.description,
             item.item_group,
-            poi.received_qty,
-            poi.returned_qty,
-            (bin.ordered_qty - (poi.received_qty - poi.returned_qty)).as_("backorder_qty"),  # Calculate Backorder Qty
         )
         .where(
             (item.disabled == 0)
@@ -60,7 +60,35 @@ def get_data(filters):
     if filters.get("item_group"):
         query = query.where(item.item_group.isin(filters.get("item_group")))
 
-    return query.run(as_dict=True)
+    raw_data = query.run(as_dict=True)
+
+    return aggregate_data(raw_data)
+
+def aggregate_data(raw_data):
+    aggregated = defaultdict(lambda: defaultdict(float))
+    grouped_data = []
+
+    for row in raw_data:
+        key = (row["warehouse"], row["item_code"])
+        if key not in aggregated:
+            aggregated[key] = row
+        else:
+            # Aggregate numeric fields
+            aggregated[key]["actual_qty"] += row.get("actual_qty", 0)
+            aggregated[key]["ordered_qty"] += row.get("ordered_qty", 0)
+            aggregated[key]["backorder_qty"] += row.get("backorder_qty", 0)
+            aggregated[key]["planned_qty"] += row.get("planned_qty", 0)
+            aggregated[key]["reserved_qty"] += row.get("reserved_qty", 0)
+            aggregated[key]["reserved_qty_for_production"] += row.get("reserved_qty_for_production", 0)
+            aggregated[key]["projected_qty"] += row.get("projected_qty", 0)
+
+    # Convert aggregated dictionary to a list
+    grouped_data = list(aggregated.values())
+    return grouped_data
+
+
+
+
 
 def get_chart_data(data):
     labels, datapoints = [], []
@@ -109,8 +137,8 @@ def get_columns():
             "convertible": "qty",
         },
         {
-            "label": _("Planned Quantity"),
-            "fieldname": "planned_qty",
+            "label": _("Backorder Quantity"),
+            "fieldname": "backorder_qty",
             "fieldtype": "Float",
             "width": 120,
             "convertible": "qty",
@@ -122,13 +150,7 @@ def get_columns():
             "width": 120,
             "convertible": "qty",
         },
-        {
-            "label": _("Reserved Quantity for Production"),
-            "fieldname": "reserved_qty_for_production",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
+        
         {
             "label": _("Projected Quantity"),
             "fieldname": "projected_qty",
@@ -150,13 +172,7 @@ def get_columns():
             "width": 120,
             "convertible": "qty",
         },
-        {
-            "label": _("Backorder Quantity"),
-            "fieldname": "backorder_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
+        
         {
             "label": _("Company"),
             "fieldname": "company",
