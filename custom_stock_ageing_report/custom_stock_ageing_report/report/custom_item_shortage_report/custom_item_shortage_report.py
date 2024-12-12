@@ -36,8 +36,9 @@ def get_data(filters):
             (bin.ordered_qty - (poi.received_qty - poi.returned_qty)).as_("backorder_qty"),
             bin.planned_qty,
             bin.reserved_qty,
-            bin.reserved_qty_for_production,
+            poi.received_qty,
             bin.projected_qty,
+            poi.returned_qty,
             wh.company,
             item.item_name,
             item.description,
@@ -60,31 +61,25 @@ def get_data(filters):
     if filters.get("item_group"):
         query = query.where(item.item_group.isin(filters.get("item_group")))
 
+    # return query.run(as_dict=True)
+
     raw_data = query.run(as_dict=True)
 
     return aggregate_data(raw_data)
 
 def aggregate_data(raw_data):
-    aggregated = defaultdict(lambda: defaultdict(float))
-    grouped_data = []
+    seen_keys = set()
+    unique_data = []
 
     for row in raw_data:
+        # Create a unique key based on warehouse and item_code
         key = (row["warehouse"], row["item_code"])
-        if key not in aggregated:
-            aggregated[key] = row
-        else:
-            # Aggregate numeric fields
-            aggregated[key]["actual_qty"] += row.get("actual_qty", 0)
-            aggregated[key]["ordered_qty"] += row.get("ordered_qty", 0)
-            aggregated[key]["backorder_qty"] += row.get("backorder_qty", 0)
-            aggregated[key]["planned_qty"] += row.get("planned_qty", 0)
-            aggregated[key]["reserved_qty"] += row.get("reserved_qty", 0)
-            aggregated[key]["reserved_qty_for_production"] += row.get("reserved_qty_for_production", 0)
-            aggregated[key]["projected_qty"] += row.get("projected_qty", 0)
+        
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_data.append(row)
 
-    # Convert aggregated dictionary to a list
-    grouped_data = list(aggregated.values())
-    return grouped_data
+    return unique_data
 
 
 
