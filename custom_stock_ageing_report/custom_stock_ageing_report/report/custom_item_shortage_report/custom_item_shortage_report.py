@@ -1,58 +1,50 @@
 import frappe
 from frappe import _
 
-from collections import defaultdict
-
+from frappe.query_builder.functions import Sum
 
 def execute(filters=None):
     columns = get_columns()
-    data = get_data(filters)
+    bin_data = get_bin_data(filters)   # Query 1: Bin, Item, Warehouse
+    po_data = get_po_data(filters)     # Query 2: PO and POI data
 
-    if not data:
+    if not bin_data:
         return [], [], None, []
 
-    chart_data = get_chart_data(data)
+    combined_data = merge_data(bin_data, po_data)
+    chart_data = get_chart_data(combined_data)
 
-    return columns, data, None, chart_data
+    return columns, combined_data, None, chart_data
 
-def get_data(filters):
+def get_bin_data(filters):
     bin = frappe.qb.DocType("Bin")
     wh = frappe.qb.DocType("Warehouse")
     item = frappe.qb.DocType("Item")
-    poi = frappe.qb.DocType("Purchase Order Item")
-    po = frappe.qb.DocType("Purchase Order")
 
     query = (
         frappe.qb.from_(bin)
         .left_join(wh).on(wh.name == bin.warehouse)
         .left_join(item).on(item.name == bin.item_code)
-        .left_join(poi).on(poi.item_code == bin.item_code)
-        .left_join(po).on(po.name == poi.parent)
         .select(
             bin.warehouse,
             bin.item_code,
             bin.actual_qty,
             bin.ordered_qty,
-            (bin.ordered_qty - (poi.received_qty - poi.returned_qty)).as_("backorder_qty"),
-            bin.planned_qty,
-            bin.reserved_qty,
-            poi.received_qty,
             bin.projected_qty,
-            poi.returned_qty,
+            bin.reserved_qty,
             wh.company,
             item.item_name,
             item.description,
-            item.item_group,
+            item.item_group
         )
         .where(
-            (item.disabled == 0)
-            & (bin.projected_qty < 0)
-            & (wh.name == bin.warehouse)
-            & (bin.item_code == item.name)
-            & (po.docstatus == 1)
-        )
-        .orderby(bin.projected_qty)
-    )
+			(item.disabled == 0)
+			& (bin.projected_qty < 0)
+			& (wh.name == bin.warehouse)
+			& (bin.item_code == item.name)
+		)
+		.orderby(bin.projected_qty)
+	)
 
     if filters.get("warehouse"):
         query = query.where(bin.warehouse.isin(filters.get("warehouse")))
@@ -63,29 +55,43 @@ def get_data(filters):
     if filters.get("item_group"):
         query = query.where(item.item_group.isin(filters.get("item_group")))
 
-    # return query.run(as_dict=True)
+    return query.run(as_dict=True)
 
-    raw_data = query.run(as_dict=True)
+def get_po_data(filters):
+    bin = frappe.qb.DocType("Bin")
+    poi = frappe.qb.DocType("Purchase Order Item")
+    po = frappe.qb.DocType("Purchase Order")
 
-    return aggregate_data(raw_data)
+    query = (
+        frappe.qb.from_(bin)
+        .left_join(poi).on(poi.item_code == bin.item_code)
+        .left_join(po).on(po.name == poi.parent)
+        .select(
+            bin.warehouse,
+            bin.item_code,
+            bin.ordered_qty,
+            Sum(poi.received_qty).as_("total_received_qty"),
+            Sum(poi.returned_qty).as_("total_returned_qty"),
+            (bin.ordered_qty - (Sum(poi.received_qty) - Sum(poi.returned_qty))).as_("backorder_qty"),
+        )
+        .where(po.docstatus == 1)
+        .groupby(bin.warehouse, bin.item_code, bin.ordered_qty)
+    )
 
-def aggregate_data(raw_data):
-    seen_keys = set()
-    unique_data = []
+    return query.run(as_dict=True)
 
-    for row in raw_data:
-        # Create a unique key based on warehouse and item_code
-        key = (row["warehouse"], row["item_code"])
-        
-        if key not in seen_keys:
-            seen_keys.add(key)
-            unique_data.append(row)
+def merge_data(bin_data, po_data):
+    # Convert PO data into a dictionary for faster lookup
+    po_dict = {row["item_code"]: row for row in po_data}
 
-    return unique_data
-
-
-
-
+    # Combine Bin data with PO data
+    for row in bin_data:
+        item_code = row.get("item_code")
+        po_row = po_dict.get(item_code, {})
+        row["received_qty"] = po_row.get("total_received_qty", 0)
+        row["returned_qty"] = po_row.get("total_returned_qty", 0)
+        row["backorder_qty"] = po_row.get("backorder_qty", 0)
+    return bin_data
 
 def get_chart_data(data):
     labels, datapoints = [], []
@@ -105,97 +111,18 @@ def get_chart_data(data):
 
 def get_columns():
     columns = [
-        {
-            "label": _("Warehouse"),
-            "fieldname": "warehouse",
-            "fieldtype": "Link",
-            "options": "Warehouse",
-            "width": 150,
-        },
-        {
-            "label": _("Item"),
-            "fieldname": "item_code",
-            "fieldtype": "Link",
-            "options": "Item",
-            "width": 150,
-        },
-        {
-            "label": _("Actual Quantity"),
-            "fieldname": "actual_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        {
-            "label": _("Ordered Quantity"),
-            "fieldname": "ordered_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        {
-            "label": _("Backorder Quantity"),
-            "fieldname": "backorder_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        {
-            "label": _("Reserved Quantity"),
-            "fieldname": "reserved_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        
-        {
-            "label": _("Projected Quantity"),
-            "fieldname": "projected_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        {
-            "label": _("Received Quantity"),
-            "fieldname": "received_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        {
-            "label": _("Returned Quantity"),
-            "fieldname": "returned_qty",
-            "fieldtype": "Float",
-            "width": 120,
-            "convertible": "qty",
-        },
-        
-        {
-            "label": _("Company"),
-            "fieldname": "company",
-            "fieldtype": "Link",
-            "options": "Company",
-            "width": 120,
-        },
-        {
-            "label": _("Item Name"),
-            "fieldname": "item_name",
-            "fieldtype": "Data",
-            "width": 100,
-        },
-        {
-            "label": _("Description"),
-            "fieldname": "description",
-            "fieldtype": "Data",
-            "width": 120,
-        },
-        {
-            "label": _("Item Group"),
-            "fieldname": "item_group",
-            "fieldtype": "Link",
-            "options": "Item Group",
-            "width": 120,
-        },
+        {"label": _("Warehouse"), "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
+        {"label": _("Item"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 150},
+        {"label": _("Actual Quantity"), "fieldname": "actual_qty", "fieldtype": "Float", "width": 120},
+        {"label": _("Ordered Quantity"), "fieldname": "ordered_qty", "fieldtype": "Float", "width": 120},
+        {"label": _("Backorder Quantity"),"fieldname": "backorder_qty","fieldtype": "Float","width": 120,"convertible": "qty",},
+        {"label": _("Reserved Quantity"), "fieldname": "reserved_qty", "fieldtype": "Float", "width": 120},
+        {"label": _("Projected Quantity"), "fieldname": "projected_qty", "fieldtype": "Float", "width": 120},
+        {"label": _("Received Quantity"), "fieldname": "received_qty", "fieldtype": "Float", "width": 120},
+        {"label": _("Returned Quantity"), "fieldname": "returned_qty", "fieldtype": "Float", "width": 120},
+        {"label": _("Company"), "fieldname": "company", "fieldtype": "Link", "options": "Company", "width": 120},
+        {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 100},
+        {"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 120},
+        {"label": _("Item Group"), "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 120},
     ]
-
     return columns
