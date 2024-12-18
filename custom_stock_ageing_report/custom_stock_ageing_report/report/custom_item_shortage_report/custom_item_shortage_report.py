@@ -88,9 +88,12 @@ def merge_data(bin_data, po_data):
     for row in bin_data:
         item_code = row.get("item_code")
         po_row = po_dict.get(item_code, {})
-        row["received_qty"] = po_row.get("total_received_qty", 0)
-        row["returned_qty"] = po_row.get("total_returned_qty", 0)
-        row["backorder_qty"] = po_row.get("backorder_qty", 0)
+        received_qty = po_row.get("total_received_qty", 0)
+        returned_qty = po_row.get("total_returned_qty", 0)
+        backorder_qty = row["ordered_qty"] - (received_qty - returned_qty)
+        row["received_qty"] = received_qty
+        row["returned_qty"] = returned_qty
+        row["backorder_qty"] = backorder_qty
     return bin_data
 
 def get_chart_data(data):
