@@ -117,12 +117,11 @@ def get_columns():
         {"label": _("Warehouse"), "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
         {"label": _("Item"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 150},
         {"label": _("Actual Quantity"), "fieldname": "actual_qty", "fieldtype": "Float", "width": 120},
-        {"label": _("Ordered Quantity"), "fieldname": "ordered_qty", "fieldtype": "Float", "width": 120},
-        {"label": _("Backorder Quantity"),"fieldname": "backorder_qty","fieldtype": "Float","width": 120,"convertible": "qty",},
+        {"label": _("Backorder Quantity"), "fieldname": "ordered_qty", "fieldtype": "Float", "width": 120},
+        
         {"label": _("Reserved Quantity"), "fieldname": "reserved_qty", "fieldtype": "Float", "width": 120},
         {"label": _("Projected Quantity"), "fieldname": "projected_qty", "fieldtype": "Float", "width": 120},
-        {"label": _("Received Quantity"), "fieldname": "received_qty", "fieldtype": "Float", "width": 120},
-        {"label": _("Returned Quantity"), "fieldname": "returned_qty", "fieldtype": "Float", "width": 120},
+        
         {"label": _("Company"), "fieldname": "company", "fieldtype": "Link", "options": "Company", "width": 120},
         {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 100},
         {"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 120},
