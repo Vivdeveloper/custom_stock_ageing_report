@@ -35,7 +35,8 @@ def get_bin_data(filters):
             wh.company,
             item.item_name,
             item.description,
-            item.item_group
+            item.item_group,
+            item.identification
         )
         .where(
 			(item.disabled == 0)
@@ -126,5 +127,6 @@ def get_columns():
         {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 100},
         {"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 120},
         {"label": _("Item Group"), "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 120},
+        {"label": _("Identification Code"), "fieldname": "identification", "fieldtype": "select", "width": 120},
     ]
     return columns
