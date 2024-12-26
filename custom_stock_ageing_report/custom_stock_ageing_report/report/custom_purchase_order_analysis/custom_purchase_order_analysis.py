@@ -89,24 +89,15 @@ def get_data(filters):
         for row in data:
             supplier = row["supplier"]
             if supplier not in supplier_map:
-                row_copy = copy.deepcopy(row)
-                supplier_map[supplier] = row_copy
-            else:
-                supplier_row = supplier_map[supplier]
-                # Sum numeric columns
-                fields = [
-                    "qty",
-                    "received_qty",
-                    "pending_qty",
-                    "billed_qty",
-                    "amount",
-                    "received_qty_amount",
-                    "billed_amount",
-                    "pending_amount",
-                ]
-                for field in fields:
-                    supplier_row[field] = flt(row[field]) + flt(supplier_row[field])
-        data = list(supplier_map.values())
+                supplier_map[supplier] = []
+            supplier_map[supplier].append(row)
+        
+        grouped_data = []
+        for supplier, rows in supplier_map.items():
+            for row in rows:
+                grouped_data.append(row)
+        data = grouped_data
+
 
     return data
 
@@ -161,18 +152,25 @@ def get_columns(filters):
             "options": "Project",
             "width": 130,
         },
-    ]
-
-    if not filters.get("group_by_po") and not filters.get("group_by_supplier"):
-        columns.append(
-            {
+        {
                 "label": _("Item Code"),
                 "fieldname": "item_code",
                 "fieldtype": "Link",
                 "options": "Item",
                 "width": 100,
-            }
-        )
+        }
+    ]
+
+    # if not filters.get("group_by_po") and not filters.get("group_by_supplier"):
+    #     columns.append(
+    #         {
+    #             "label": _("Item Code"),
+    #             "fieldname": "item_code",
+    #             "fieldtype": "Link",
+    #             "options": "Item",
+    #             "width": 100,
+    #         }
+    #     )
 
     columns.extend(
         [
