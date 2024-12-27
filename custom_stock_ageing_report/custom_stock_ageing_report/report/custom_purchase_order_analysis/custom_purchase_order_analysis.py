@@ -50,6 +50,7 @@ def get_data(filters):
             po.status,
             po.supplier,
             po_item.item_code,
+            po_item.description,
             po_item.qty,
             po_item.received_qty,
             (po_item.qty - po_item.received_qty).as_("pending_qty"),
@@ -85,19 +86,62 @@ def get_data(filters):
     data = query.run(as_dict=True)
 
     if filters.get("group_by_supplier"):
-        supplier_map = {}
+        grouped_data_with_totals = []
+        current_supplier = None
+        supplier_rows = []
+    
         for row in data:
-            supplier = row["supplier"]
-            if supplier not in supplier_map:
-                supplier_map[supplier] = []
-            supplier_map[supplier].append(row)
-        
-        grouped_data = []
-        for supplier, rows in supplier_map.items():
-            for row in rows:
-                grouped_data.append(row)
-        data = grouped_data
+            if current_supplier and current_supplier != row["supplier"]:
+                # Add totals row for the previous supplier
+                totals = {
+                    "supplier": current_supplier + " (Total)",
+                    "qty": sum(r["qty"] for r in supplier_rows),
+                    "received_qty": sum(r["received_qty"] for r in supplier_rows),
+                    "pending_qty": sum(r["pending_qty"] for r in supplier_rows),
+                    "billed_qty": sum(r["billed_qty"] for r in supplier_rows),
+                    "amount": sum(r["amount"] for r in supplier_rows),
+                    "billed_amount": sum(r["billed_amount"] for r in supplier_rows),
+                    "pending_amount": sum(r["pending_amount"] for r in supplier_rows),
+                    "received_qty_amount": sum(r["received_qty_amount"] for r in supplier_rows),
+                }
+                grouped_data_with_totals.append(totals)
+                supplier_rows = []
+    
+            # Add the current row to the list
+            grouped_data_with_totals.append(row)
+            supplier_rows.append(row)
+            current_supplier = row["supplier"]
+    
+        # Add totals for the last supplier group
+        if supplier_rows:
+            totals = {
+                "supplier": current_supplier + " (Total)",
+                "qty": sum(r["qty"] for r in supplier_rows),
+                "received_qty": sum(r["received_qty"] for r in supplier_rows),
+                "pending_qty": sum(r["pending_qty"] for r in supplier_rows),
+                "billed_qty": sum(r["billed_qty"] for r in supplier_rows),
+                "amount": sum(r["amount"] for r in supplier_rows),
+                "billed_amount": sum(r["billed_amount"] for r in supplier_rows),
+                "pending_amount": sum(r["pending_amount"] for r in supplier_rows),
+                "received_qty_amount": sum(r["received_qty_amount"] for r in supplier_rows),
+            }
+            grouped_data_with_totals.append(totals)
+    
+        return grouped_data_with_totals
 
+    # if filters.get("group_by_supplier"):
+    #     supplier_map = {}
+    #     for row in data:
+    #         supplier = row["supplier"]
+    #         if supplier not in supplier_map:
+    #             supplier_map[supplier] = []
+    #         supplier_map[supplier].append(row)
+        
+    #     grouped_data = []
+    #     for supplier, rows in supplier_map.items():
+    #         for row in rows:
+    #             grouped_data.append(row)
+    #     data = grouped_data
 
     return data
 
@@ -158,7 +202,8 @@ def get_columns(filters):
                 "fieldtype": "Link",
                 "options": "Item",
                 "width": 100,
-        }
+        },
+        {"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 120},
     ]
 
     # if not filters.get("group_by_po") and not filters.get("group_by_supplier"):
