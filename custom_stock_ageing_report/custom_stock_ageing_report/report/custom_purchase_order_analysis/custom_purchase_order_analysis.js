@@ -77,6 +77,7 @@ frappe.query_reports["Custom Purchase Order Analysis"] = {
 					frappe.query_report.set_filter_value("group_by_supplier", 0);
 					frappe.query_report.set_filter_value("group_by_item_code", 0);
 				}
+				frappe.query_report.refresh();
 			},
 		},
 		{
@@ -89,6 +90,7 @@ frappe.query_reports["Custom Purchase Order Analysis"] = {
 					frappe.query_report.set_filter_value("group_by_po", 0);
 					frappe.query_report.set_filter_value("group_by_item_code", 0);
 				}
+				frappe.query_report.refresh();
 			},
 		},
 		{
@@ -101,6 +103,7 @@ frappe.query_reports["Custom Purchase Order Analysis"] = {
 					frappe.query_report.set_filter_value("group_by_po", 0);
 					frappe.query_report.set_filter_value("group_by_supplier", 0);
 				}
+				frappe.query_report.refresh();
 			},
 		},
 	],
