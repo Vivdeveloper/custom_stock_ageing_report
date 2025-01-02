@@ -3,6 +3,7 @@
 /* eslint-disable */
 
 frappe.query_reports["Custom Purchase Order Analysis"] = {
+		
 	filters: [
 		{
 			fieldname: "company",
@@ -71,22 +72,56 @@ frappe.query_reports["Custom Purchase Order Analysis"] = {
 			label: __("Group by Purchase Order"),
 			fieldtype: "Check",
 			default: 0,
+			on_change: function () {
+				if (this.get_value()) {
+					frappe.query_report.set_filter_value("group_by_supplier", 0);
+					frappe.query_report.set_filter_value("group_by_item_code", 0);
+				}
+			},
 		},
 		{
 			fieldname: "group_by_supplier",
 			label: __("Group by Supplier"),
 			fieldtype: "Check",
 			default: 0,
+			on_change: function () {
+				if (this.get_value()) {
+					frappe.query_report.set_filter_value("group_by_po", 0);
+					frappe.query_report.set_filter_value("group_by_item_code", 0);
+				}
+			},
+		},
+		{
+			fieldname: "group_by_item_code",
+			label: __("Group by Item Code"),
+			fieldtype: "Check",
+			default: 0,
+			on_change: function () {
+				if (this.get_value()) {
+					frappe.query_report.set_filter_value("group_by_po", 0);
+					frappe.query_report.set_filter_value("group_by_supplier", 0);
+				}
+			},
 		},
 	],
 
-	formatter: function (value, row, column, data, default_formatter) {
-		value = default_formatter(value, row, column, data);
-		let format_fields = ["received_qty", "billed_amount"];
+	"formatter": function(value, row, column, data, default_formatter) {
+        value = default_formatter(value, row, column, data);
+        
+        if (data && data.item_code && data.item_code.includes('(Total)')) {
+            value = "<b>" + value + "</b>";
+        }
+        
+        return value;
+    }
 
-		if (in_list(format_fields, column.fieldname) && data && data[column.fieldname] > 0) {
-			value = "<span style='color:green'>" + value + "</span>";
-		}
-		return value;
-	},
+	// formatter: function (value, row, column, data, default_formatter) {
+	// 	value = default_formatter(value, row, column, data);
+	// 	let format_fields = ["received_qty", "billed_amount"];
+
+	// 	if (in_list(format_fields, column.fieldname) && data && data[column.fieldname] > 0) {
+	// 		value = "<span style='color:green'>" + value + "</span>";
+	// 	}
+	// 	return value;
+	// },
 };

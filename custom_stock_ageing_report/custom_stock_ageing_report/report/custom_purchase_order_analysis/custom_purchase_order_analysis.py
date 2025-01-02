@@ -19,9 +19,9 @@ def execute(filters=None):
     if not data:
         return [], [], None, []
 
-    data, chart_data = prepare_data(data, filters)
+    # data, chart_data = prepare_data(data, filters)
 
-    return columns, data, None, chart_data
+    return columns, data, None
 
 def validate_filters(filters):
     from_date, to_date = filters.get("from_date"), filters.get("to_date")
@@ -50,6 +50,7 @@ def get_data(filters):
             po.status,
             po.supplier,
             po_item.item_code,
+            po_item.item_name,
             po_item.description,
             po_item.qty,
             po_item.received_qty,
@@ -85,95 +86,232 @@ def get_data(filters):
 
     data = query.run(as_dict=True)
 
-    if filters.get("group_by_supplier"):
-        grouped_data_with_totals = []
-        current_supplier = None
-        supplier_rows = []
-    
-        for row in data:
-            if current_supplier and current_supplier != row["supplier"]:
-                # Add totals row for the previous supplier
-                totals = {
-                    "supplier": current_supplier + " (Total)",
-                    "qty": sum(r["qty"] for r in supplier_rows),
-                    "received_qty": sum(r["received_qty"] for r in supplier_rows),
-                    "pending_qty": sum(r["pending_qty"] for r in supplier_rows),
-                    "billed_qty": sum(r["billed_qty"] for r in supplier_rows),
-                    "amount": sum(r["amount"] for r in supplier_rows),
-                    "billed_amount": sum(r["billed_amount"] for r in supplier_rows),
-                    "pending_amount": sum(r["pending_amount"] for r in supplier_rows),
-                    "received_qty_amount": sum(r["received_qty_amount"] for r in supplier_rows),
-                }
-                grouped_data_with_totals.append(totals)
-                supplier_rows = []
-    
-            # Add the current row to the list
-            grouped_data_with_totals.append(row)
-            supplier_rows.append(row)
-            current_supplier = row["supplier"]
-    
-        # Add totals for the last supplier group
-        if supplier_rows:
-            totals = {
-                "supplier": current_supplier + " (Total)",
-                "qty": sum(r["qty"] for r in supplier_rows),
-                "received_qty": sum(r["received_qty"] for r in supplier_rows),
-                "pending_qty": sum(r["pending_qty"] for r in supplier_rows),
-                "billed_qty": sum(r["billed_qty"] for r in supplier_rows),
-                "amount": sum(r["amount"] for r in supplier_rows),
-                "billed_amount": sum(r["billed_amount"] for r in supplier_rows),
-                "pending_amount": sum(r["pending_amount"] for r in supplier_rows),
-                "received_qty_amount": sum(r["received_qty_amount"] for r in supplier_rows),
-            }
-            grouped_data_with_totals.append(totals)
-    
-        return grouped_data_with_totals
-
     # if filters.get("group_by_supplier"):
-    #     supplier_map = {}
+    #     grouped_data_with_totals = []
+    #     seen_suppliers = set() 
+    #     supplier_rows = {}
+
     #     for row in data:
     #         supplier = row["supplier"]
-    #         if supplier not in supplier_map:
-    #             supplier_map[supplier] = []
-    #         supplier_map[supplier].append(row)
-        
-    #     grouped_data = []
-    #     for supplier, rows in supplier_map.items():
+    #         if supplier not in supplier_rows:
+    #             supplier_rows[supplier] = []
+    #         supplier_rows[supplier].append(row)
+
+    #     for supplier, rows in supplier_rows.items():
+            
+    #         if supplier not in seen_suppliers:
+    #             seen_suppliers.add(supplier)
+    #             rows[0]["supplier"] = supplier
+    #         else:
+    #             rows[0]["supplier"] = ""
+
+    #         grouped_data_with_totals.extend(rows)
+
+    #         totals = {
+    #         "supplier": supplier + " (Total)",
+    #         "qty": sum(r["qty"] for r in rows),
+    #         "received_qty": sum(r["received_qty"] for r in rows),
+    #         "pending_qty": sum(r["pending_qty"] for r in rows),
+    #         "billed_qty": sum(r["billed_qty"] for r in rows),
+    #         "amount": sum(r["amount"] for r in rows),
+    #         "billed_amount": sum(r["billed_amount"] for r in rows),
+    #         "pending_amount": sum(r["pending_amount"] for r in rows),
+    #         "received_qty_amount": sum(r["received_qty_amount"] for r in rows),
+    #         "bold": 1,
+    #         }
+    #         grouped_data_with_totals.append(totals)
+
+        # return grouped_data_with_totals
+
+
+
+    # if filters.get("group_by_supplier"):
+    #     grouped_data_with_totals = []
+    #     supplier_rows = {}
+
+    #     # Group data by supplier
+    #     for row in data:
+    #         supplier = row["supplier"]
+    #         if supplier not in supplier_rows:
+    #             supplier_rows[supplier] = []
+    #         supplier_rows[supplier].append(row)
+
+    #     # Process each supplier's rows
+    #     for supplier, rows in supplier_rows.items():
+    #         grouped_data_with_totals.append({"supplier": supplier})  # Supplier header row
+
+    #         # Group rows by item code within the supplier
+    #         item_code_rows = {}
     #         for row in rows:
-    #             grouped_data.append(row)
-    #     data = grouped_data
+    #             item_code = row["item_code"]
+    #             if item_code not in item_code_rows:
+    #                 item_code_rows[item_code] = []
+    #             item_code_rows[item_code].append(row)
+
+    #         # Process each item's rows and calculate totals
+    #         for item_code, item_rows in item_code_rows.items():
+    #             # Add item rows
+    #             for row in item_rows:
+    #                 row["supplier"] = ""  # Remove supplier name for individual rows
+    #                 row["item_code"] = item_code
+    #                 grouped_data_with_totals.append(row)
+
+    #             # Calculate item-wise totals
+    #             totals = {
+    #                 "supplier": "",
+    #                 "item_code": f"{item_code} (Total)",
+    #                 "qty": sum(r["qty"] for r in item_rows),
+    #                 "received_qty": sum(r["received_qty"] for r in item_rows),
+    #                 "pending_qty": sum(r["pending_qty"] for r in item_rows),
+    #                 "billed_qty": sum(r["billed_qty"] for r in item_rows),
+    #                 "amount": sum(r["amount"] for r in item_rows),
+    #                 "billed_amount": sum(r["billed_amount"] for r in item_rows),
+    #                 "pending_amount": sum(r["pending_amount"] for r in item_rows),
+    #                 "received_qty_amount": sum(r["received_qty_amount"] for r in item_rows),
+    #             }
+
+    #             # Make the total row fields bold
+    #             totals = {key: f"<b>{value}</b>" if isinstance(value, (str, int, float)) else value for key, value in totals.items()}
+    #             grouped_data_with_totals.append(totals)
+
+    #     return grouped_data_with_totals
+
+
+
+    if filters.get("group_by_supplier"):
+        grouped_data_with_totals = []
+        supplier_rows = {}
+
+        # Group data by supplier
+        for row in data:
+            supplier = row["supplier"]
+            if supplier not in supplier_rows:
+                supplier_rows[supplier] = []
+            supplier_rows[supplier].append(row)
+
+        # Process each supplier's rows
+        for supplier, rows in supplier_rows.items():
+            grouped_data_with_totals.append({
+                "supplier": supplier,
+                "item_code": "Supplier"  # This won't trigger the bold formatting
+            })
+
+            # Group rows by item code within the supplier
+            item_code_rows = {}
+            for row in rows:
+                item_code = row["item_code"]
+                if item_code not in item_code_rows:
+                    item_code_rows[item_code] = []
+                item_code_rows[item_code].append(row)
+
+            # Process each item's rows and calculate totals
+            for item_code, item_rows in item_code_rows.items():
+                # Add item rows
+                for row in item_rows:
+                    row["supplier"] = ""  # Remove supplier name for individual rows
+                    row["item_code"] = item_code
+                    
+                    grouped_data_with_totals.append(row)
+
+                # Calculate item-wise totals
+                    totals = {
+                    "supplier": "",
+                    "item_code": f"{item_code} (Total)",  # This will trigger bold formatting
+                    "qty": sum(r["qty"] for r in item_rows),
+                    "received_qty": sum(r["received_qty"] for r in item_rows),
+                    "pending_qty": sum(r["pending_qty"] for r in item_rows),
+                    "billed_qty": sum(r["billed_qty"] for r in item_rows),
+                    "amount": sum(r["amount"] for r in item_rows),
+                    "billed_amount": sum(r["billed_amount"] for r in item_rows),
+                    "pending_amount": sum(r["pending_amount"] for r in item_rows),
+                    "received_qty_amount": sum(r["received_qty_amount"] for r in item_rows),
+                    
+                }
+                grouped_data_with_totals.append(totals)
+
+        return grouped_data_with_totals
+
+
+
+    
+    if filters.get("group_by_item_code"):
+        grouped_data_with_totals = []
+        seen_item_codes = set()  
+        item_code_rows = {}
+        
+        for row in data:
+            item_code = row["item_code"]
+            if item_code not in item_code_rows:
+                item_code_rows[item_code] = []
+            item_code_rows[item_code].append(row)
+        
+        for item_code, rows in item_code_rows.items():
+            
+            if item_code not in seen_item_codes:
+                seen_item_codes.add(item_code)
+                rows[0]["item_code"] = item_code
+            else:
+                rows[0]["item_code"] = ""
+
+            for row in rows:
+                row["is_bold"] = False
+
+            grouped_data_with_totals.extend(rows)
+            
+            totals = {
+                "item_code": item_code + " (Total)",
+                "qty": sum(r["qty"] for r in rows),
+                "received_qty": sum(r["received_qty"] for r in rows),
+                "pending_qty": sum(r["pending_qty"] for r in rows),
+                "billed_qty": sum(r["billed_qty"] for r in rows),
+                "amount": sum(r["amount"] for r in rows),
+                "billed_amount": sum(r["billed_amount"] for r in rows),
+                "pending_amount": sum(r["pending_amount"] for r in rows),
+                "received_qty_amount": sum(r["received_qty_amount"] for r in rows),
+                "is_bold": True
+            }
+            grouped_data_with_totals.append(totals)
+
+        return grouped_data_with_totals
 
     return data
 
-def prepare_data(data, filters):
-    completed, pending = 0, 0
-    pending_field = "pending_amount"
-    completed_field = "billed_amount"
+# def prepare_data(data, filters):
+#     completed, pending = 0, 0
+#     pending_field = "pending_amount"
+#     completed_field = "billed_amount"
 
-    for row in data:
-        completed += row[completed_field]
-        pending += row[pending_field]
+#     for row in data:
+#         completed += row[completed_field]
+#         pending += row[pending_field]
 
-        # Prepare additional fields
-        row["qty_to_bill"] = flt(row["qty"]) - flt(row["billed_qty"])
+#         # Prepare additional fields
+#         row["qty_to_bill"] = flt(row["qty"]) - flt(row["billed_qty"])
 
-    chart_data = prepare_chart_data(pending, completed)
+#     chart_data = prepare_chart_data(pending, completed)
 
-    return data, chart_data
+#     return data, chart_data
 
-def prepare_chart_data(pending, completed):
-    labels = ["Amount to Bill", "Billed Amount"]
+# def prepare_chart_data(pending, completed):
+#     labels = ["Amount to Bill", "Billed Amount"]
 
-    return {
-        "data": {"labels": labels, "datasets": [{"values": [pending, completed]}]},
-        "type": "donut",
-        "height": 300,
-    }
+#     return {
+#         "data": {"labels": labels, "datasets": [{"values": [pending, completed]}]},
+#         "type": "donut",
+#         "height": 300,
+#     }
 
 def get_columns(filters):
     columns = [
         {"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 90},
         {"label": _("Required By"), "fieldname": "required_date", "fieldtype": "Date", "width": 90},
+        {
+            "label": _("Project"),
+            "fieldname": "project",
+            "fieldtype": "Link",
+            "options": "Project",
+            "width": 130,
+        },
         {
             "label": _("Purchase Order"),
             "fieldname": "purchase_order",
@@ -189,13 +327,7 @@ def get_columns(filters):
             "options": "Supplier",
             "width": 130,
         },
-        {
-            "label": _("Project"),
-            "fieldname": "project",
-            "fieldtype": "Link",
-            "options": "Project",
-            "width": 130,
-        },
+        
         {
                 "label": _("Item Code"),
                 "fieldname": "item_code",
@@ -203,20 +335,9 @@ def get_columns(filters):
                 "options": "Item",
                 "width": 100,
         },
+        {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 120},
         {"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 120},
     ]
-
-    # if not filters.get("group_by_po") and not filters.get("group_by_supplier"):
-    #     columns.append(
-    #         {
-    #             "label": _("Item Code"),
-    #             "fieldname": "item_code",
-    #             "fieldtype": "Link",
-    #             "options": "Item",
-    #             "width": 100,
-    #         }
-    #     )
-
     columns.extend(
         [
             {
