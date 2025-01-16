@@ -208,7 +208,7 @@ def get_data(filters):
             for item_code, item_rows in item_code_rows.items():
                 # Add item rows
                 for row in item_rows:
-                    row["supplier"] = ""  # Remove supplier name for individual rows
+                    # row["supplier"] = ""  # Remove supplier name for individual rows
                     row["item_code"] = item_code
                     
                     grouped_data_with_totals.append(row)
