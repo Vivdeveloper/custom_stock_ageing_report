@@ -73,29 +73,7 @@ def execute(filters=None):
     where_clause = " AND     ".join(conditions) if conditions else "1=1"
 
 
-    # sales_invoices = frappe.db.sql(
-    #     f"""
-    #     SELECT 
-    #         si.customer,
-    #         si.name,
-    #         si.due_date,
-    #         si.outstanding_amount,
-    #         ccl.category,
-    #         ccl.credit_limit_amount,
-    #         ccl.credit_days
-    #     FROM 
-    #         tabSales Invoice si
-    #     LEFT JOIN 
-    #         tabCustomer Credit Limit Custom ccl
-    #     ON 
-    #         si.customer = ccl.parent
-    #     WHERE
-    #         {where_clause}
-    #     """,
-    #     as_dict=True
-    # )
-
-      # Fetch data with matching category
+   
     sales_invoices = frappe.db.sql(
         f"""
         SELECT 
@@ -108,9 +86,9 @@ def execute(filters=None):
             ccl.credit_limit_amount,
             ccl.credit_days
         FROM 
-            tabSales Invoice si
+           `tabSales Invoice` AS si
         LEFT JOIN 
-            tabCustomer Credit Limit Custom ccl
+            `tabCustomer Credit Limit Custom` AS ccl
         ON 
             si.customer = ccl.parent AND si.category = ccl.category  -- Ensure category matches
         WHERE
@@ -135,11 +113,7 @@ def execute(filters=None):
             # Handle cases with no due date
             status = "No Due Date"
 
-        # credit_limit_combined= (
-        # f"{si.credit_limit_amount} / {si.credit_days} days"
-        # if si.credit_limit_amount and si.credit_days
-        # else "Not Set" #)    
-          # Check if category matches and fetch credit limit details
+        
         if si.credit_category == si.category:
             credit_limit_combined = (
                 f"{si.credit_limit_amount} / {si.credit_days} days"
