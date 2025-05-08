@@ -1,15 +1,7 @@
-# Copyright (c) 2025, sushant and contributors
-# For license information, please see license.txt
-
-# import frappe
-
-
 import frappe
 from frappe.utils import getdate, nowdate, date_diff
 
-
 def execute(filters=None):
-
     # Define columns
     columns = [
         {
@@ -20,10 +12,17 @@ def execute(filters=None):
             "width": 150
         },
         {
-            "fieldname": "category",    
+            "fieldname": "sales_person",
+            "label": "Sales Person",
+            "fieldtype": "Link",
+            "options": "Sales Person",
+            "width": 150
+        },
+        {
+            "fieldname": "category",
             "label": "Category",
             "fieldtype": "Link",
-            "options":"Category",
+            "options": "Category",
             "width": 150
         },
         {
@@ -33,14 +32,39 @@ def execute(filters=None):
             "width": 150
         },
         {
+            "fieldname": "posting_date",
+            "label": "Date",
+            "fieldtype": "Date",
+            "width": 150
+        },
+        {
+            "label": "Branch",
+            "fieldname": "branch",
+            "fieldtype": "Link",
+            "options": "Branch",
+            "width": 100
+        },
+        {
             "fieldname": "credit_days_left",
             "label": "Credit Days Left",
             "fieldtype": "Data",
             "width": 150
         },
         {
+            "fieldname": "rounded_total",
+            "label": "Rounded Total",
+            "fieldtype": "Currency",
+            "width": 150
+        },
+        {
+            "fieldname": "total_advance",
+            "label": "Total Advance",
+            "fieldtype": "Currency",
+            "width": 150
+        },
+        {
             "fieldname": "outstanding_amount",
-            "label": "Pending Amount",
+            "label": "Outstanding Amount",
             "fieldtype": "Currency",
             "width": 150
         },
@@ -49,9 +73,9 @@ def execute(filters=None):
             "label": "Limit (Credit Limit / Credit Days)",
             "fieldtype": "Data",
             "width": 200
-}
+        }
     ]
-    
+
     # Initialize filters to ensure no KeyError
     if not filters:
         filters = {}
@@ -60,60 +84,82 @@ def execute(filters=None):
     from_date_filter = filters.get("from_date")
     to_date_filter = filters.get("to_date")
     customer_filter = filters.get("customer")
+    sales_person_filter = filters.get("sales_person")
+    branch_filter = filters.get("branch")
+    category_filter = filters.get("category")
+    credit_days_left_filter = filters.get("credit_days_left")
 
     # Build the conditions for the database query
     conditions = []
     if from_date_filter:
-        conditions.append(f"posting_date >= '{from_date_filter}'")
+        conditions.append(f"si.posting_date >= '{from_date_filter}'")
     if to_date_filter:
-        conditions.append(f"posting_date <= '{to_date_filter}'")
+        conditions.append(f"si.posting_date <= '{to_date_filter}'")
     if customer_filter:
-        conditions.append(f"customer = '{customer_filter}'")
+        conditions.append(f"si.customer = '{customer_filter}'")
+    if sales_person_filter:
+        conditions.append(f"st.sales_person = '{sales_person_filter}'")
+    if branch_filter:
+        conditions.append(f"si.branch = '{branch_filter}'")
+    if category_filter:
+        conditions.append(f"si.category = '{category_filter}'")
 
-    where_clause = " AND     ".join(conditions) if conditions else "1=1"
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
 
-
-   
+    # Query to fetch sales invoices with sales person from sales_team table
     sales_invoices = frappe.db.sql(
         f"""
         SELECT 
             si.customer,
             si.category,
             si.name,
-            si.due_date,
+            si.posting_date,
+            si.branch,
+            si.rounded_total,
+            si.total_advance,
             si.outstanding_amount,
             ccl.category AS credit_category,
             ccl.credit_limit_amount,
-            ccl.credit_days
+            ccl.credit_days,
+            si.due_date,
+            st.sales_person
         FROM 
-           `tabSales Invoice` AS si
+            `tabSales Invoice` AS si
         LEFT JOIN 
             `tabCustomer Credit Limit Custom` AS ccl
         ON 
-            si.customer = ccl.parent AND si.category = ccl.category  -- Ensure category matches
+            si.customer = ccl.parent AND si.category = ccl.category
+        LEFT JOIN 
+            `tabSales Team` AS st
+        ON 
+            si.name = st.parent AND st.parenttype = 'Sales Invoice'
         WHERE
             {where_clause}
         """,
         as_dict=True
     )
 
-    # Process data to calculate credit days left
+    # Process data to calculate credit days left and apply credit_days_left filter
     data = []
-    current_date = getdate(nowdate())  # Get today's date
+    current_date = getdate(nowdate())
     for si in sales_invoices:
         if si.due_date:
             due_date = getdate(si.due_date)
-            credit_days_left = date_diff(due_date, current_date)  # Calculate days left
+            credit_days_left = date_diff(due_date, current_date)
             if credit_days_left < 0:
-                # Overdue logic with formatting
                 status = f"<font color='red'>Overdue +{abs(credit_days_left)} days</font>"
+                filter_match = credit_days_left_filter in ["", "Overdue"]
             else:
                 status = f"{credit_days_left} days left"
+                filter_match = credit_days_left_filter in ["", "Days"]
         else:
-            # Handle cases with no due date
             status = "No Due Date"
+            filter_match = credit_days_left_filter in [""]
 
-        
+        # Apply credit_days_left filter
+        if credit_days_left_filter and not filter_match:
+            continue
+
         if si.credit_category == si.category:
             credit_limit_combined = (
                 f"{si.credit_limit_amount} / {si.credit_days} days"
@@ -126,9 +172,14 @@ def execute(filters=None):
         # Append processed data
         data.append({
             "customer": si.customer,
+            "sales_person": si.sales_person,
             "category": si.category,
             "name": si.name,
+            "posting_date": si.posting_date,
+            "branch": si.branch,
             "credit_days_left": status,
+            "rounded_total": si.rounded_total,
+            "total_advance": si.total_advance,
             "outstanding_amount": si.outstanding_amount,
             "credit_limit": credit_limit_combined
         })

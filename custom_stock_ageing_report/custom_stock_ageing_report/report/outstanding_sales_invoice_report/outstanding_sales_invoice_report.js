@@ -1,28 +1,53 @@
-// Copyright (c) 2025, sushant and contributors
-// For license information, please see license.txt
-
 frappe.query_reports["Outstanding Sales Invoice Report"] = {
 	"filters": [
 		{
-            "fieldname": "from_date",
-            "label": __("From Date"),
-            "fieldtype": "Date",
-            "default": frappe.datetime.month_start(), // Default to the first day of the current month
-            "reqd": 1 // Make it mandatory
-        },
-        {
-            "fieldname": "to_date",
-            "label": __("To Date"),
-            "fieldtype": "Date",
-            "default": frappe.datetime.month_end(), // Default to the last day of the current month
-            "reqd": 1 // Make it mandatory
-        },
-        {
-            "fieldname": "customer",
-            "label": __("Customer Name"),
-            "fieldtype": "Link",
-            "options": "Customer", // Links to the Customer doctype
-            "reqd": 0 // Optional filter
-        }
+			"fieldname": "from_date",
+			"label": __("From Date"),
+			"fieldtype": "Date",
+			"default": frappe.datetime.month_start(),
+			"reqd": 1
+		},
+		{
+			"fieldname": "to_date",
+			"label": __("To Date"),
+			"fieldtype": "Date",
+			"default": frappe.datetime.month_end(),
+			"reqd": 1
+		},
+		{
+			"fieldname": "customer",
+			"label": __("Customer Name"),
+			"fieldtype": "Link",
+			"options": "Customer",
+			"reqd": 0
+		},
+		{
+			"fieldname": "sales_person",
+			"label": __("Sales Person Name"),
+			"fieldtype": "Link",
+			"options": "Sales Person",
+			"reqd": 0
+		},
+		{
+			"fieldname": "branch",
+			"label": __("Branch"),
+			"fieldtype": "Link",
+			"options": "Branch",
+			"reqd": 0
+		},
+		{
+			"fieldname": "credit_days_left",
+			"label": __("Credit Days Left"),
+			"fieldtype": "Select",
+			"options": "\nDays\nOverdue",
+			"reqd": 0
+		},
+		{
+			"fieldname": "category",
+			"label": __("Category"),
+			"fieldtype": "Link",
+			"options": "Category",
+			"reqd": 0
+		}
 	]
 };
