@@ -5,14 +5,14 @@ frappe.query_reports["Income and Expenses Report"] = {
 			"fieldname": "from_date",
 			"label": "From Date",
 			"fieldtype": "Date",
-			"default": "2024-01-01",
+			"default": "2024-04-01",
 			"reqd": 1
 		},
 		{
 			"fieldname": "to_date",
 			"label": "To Date",
 			"fieldtype": "Date",
-			"default": "2023-12-31",
+			"default": "2025-03-31",
 			"reqd": 1
 		},
 		{

@@ -138,7 +138,7 @@ def execute(filters=None):
         """,
         as_dict=True
     )
-
+ 
     # Process data to calculate credit days left and apply credit_days_left filter
     data = []
     current_date = getdate(nowdate())
