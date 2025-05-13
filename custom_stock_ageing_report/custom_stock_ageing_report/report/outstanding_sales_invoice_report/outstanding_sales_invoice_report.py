@@ -143,18 +143,24 @@ def execute(filters=None):
     data = []
     current_date = getdate(nowdate())
     for si in sales_invoices:
-        if si.due_date:
-            due_date = getdate(si.due_date)
-            credit_days_left = date_diff(due_date, current_date)
-            if credit_days_left < 0:
-                status = f"<font color='red'>Overdue +{abs(credit_days_left)} days</font>"
-                filter_match = credit_days_left_filter in ["", "Overdue"]
-            else:
+            # Get credit days for the category
+        credit_days = si.credit_days if si.credit_days else 0
+        invoice_date = getdate(si.posting_date)
+
+        # Calculate credit days left
+        if credit_days > 0:
+            days_passed = date_diff(current_date, invoice_date)
+            credit_days_left = credit_days - days_passed
+            if credit_days_left > -1:
                 status = f"{credit_days_left} days left"
                 filter_match = credit_days_left_filter in ["", "Days"]
+            else:
+                status = f"<font color='red'>Overdue +{abs(credit_days_left)} days</font>"
+                filter_match = credit_days_left_filter in ["", "Overdue"]
         else:
-            status = "No Due Date"
-            filter_match = credit_days_left_filter in [""]
+            credit_days_left = 0
+            status = "0"
+            filter_match = credit_days_left_filter in [""]        
 
         # Apply credit_days_left filter
         if credit_days_left_filter and not filter_match:
