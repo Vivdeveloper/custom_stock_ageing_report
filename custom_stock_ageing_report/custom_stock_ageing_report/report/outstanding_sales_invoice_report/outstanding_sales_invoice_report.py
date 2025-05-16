@@ -103,6 +103,8 @@ def execute(filters=None):
         conditions.append(f"si.branch = '{branch_filter}'")
     if category_filter:
         conditions.append(f"si.category = '{category_filter}'")
+    # Add status filter for sales invoices
+    conditions.append(f"si.status IN " + " ('Partly Paid', 'Unpaid', 'Overdue')")
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
 
