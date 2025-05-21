@@ -48,6 +48,15 @@ frappe.query_reports["Outstanding Sales Invoice Report"] = {
 			"fieldtype": "Link",
 			"options": "Category",
 			"reqd": 0
+		},
+		{
+			"fieldname": "group_by_customer",
+			"label": __("Group by Customer"),
+			"fieldtype": "Check",
+			"default": 0
 		}
+		
 	]
 };
+
+
