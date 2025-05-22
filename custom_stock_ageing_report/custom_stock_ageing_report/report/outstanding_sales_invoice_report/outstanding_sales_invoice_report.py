@@ -6,11 +6,12 @@ def execute(filters=None):
     if not filters:
         filters = {}
 
-    group_by_customer = filters.get("group_by_customer", 0)
+    group_by_category = filters.get("group_by_category", 0)
 
-    # Define columns based on group_by_customer
-    if group_by_customer:
+    # Define columns based on group_by_category
+    if group_by_category:
         columns = [
+            
             {
                 "fieldname": "customer",
                 "label": "Customer",
@@ -19,17 +20,16 @@ def execute(filters=None):
                 "width": 150
             },
             {
+                "fieldname": "category",
+                "label": "Category",
+                "fieldtype": "HTML",  # HTML to render bold category
+                "width": 150
+            },
+            {
                 "fieldname": "sales_person",
                 "label": "Sales Person",
                 "fieldtype": "Link",
                 "options": "Sales Person",
-                "width": 150
-            },
-            {
-                "fieldname": "category",
-                "label": "Category",
-                "fieldtype": "Link",
-                "options": "Category",
                 "width": 150
             },
             {
@@ -54,19 +54,19 @@ def execute(filters=None):
             {
                 "fieldname": "rounded_total",
                 "label": "Rounded Total",
-                "fieldtype": "Currency",
+                "fieldtype": "HTML",  # Changed to HTML for bold totals
                 "width": 150
             },
             {
                 "fieldname": "total_advance",
                 "label": "Total Advance",
-                "fieldtype": "Currency",
+                "fieldtype": "HTML",  # Changed to HTML for bold totals
                 "width": 150
             },
             {
                 "fieldname": "outstanding_amount",
                 "label": "Outstanding Amount",
-                "fieldtype": "Currency",
+                "fieldtype": "HTML",  # Changed to HTML for bold totals
                 "width": 150
             }
         ]
@@ -232,8 +232,8 @@ def execute(filters=None):
         if credit_days_left_filter and not filter_match:
             continue
 
-        # When group_by_customer is checked, only include overdue invoices
-        if group_by_customer and credit_days_left >= 0:
+        # When group_by_category is checked, only include overdue invoices
+        if group_by_category and credit_days_left >= 0:
             continue
 
         # Calculate credit limit
@@ -262,47 +262,46 @@ def execute(filters=None):
             "credit_limit": credit_limit_combined
         })
 
-    # Handle group by customer
+    # Handle group by category
     result = []
-    if group_by_customer:
+    if group_by_category:
         grouped_data = {}
         for row in data:
-            cust = row["customer"]
-            if cust not in grouped_data:
-                grouped_data[cust] = {
+            cat = row["category"]
+            if cat not in grouped_data:
+                grouped_data[cat] = {
                     "rows": [],
                     "outstanding_amount": 0,
                     "rounded_total": 0,
-                    "total_advance": 0,
-                    "customer_name": row["customer_name"]
+                    "total_advance": 0
                 }
-            grouped_data[cust]["rows"].append({
+            grouped_data[cat]["rows"].append({
+                "category": row["category"],  # Plain text for regular rows
                 "customer": row["customer"],
                 "sales_person": row["sales_person"],
-                "category": row["category"],
                 "name": row["name"],
                 "posting_date": row["posting_date"],
                 "branch": row["branch"],
-                "rounded_total": row["rounded_total"],
-                "total_advance": row["total_advance"],
-                "outstanding_amount": row["outstanding_amount"]
+                "rounded_total": row["rounded_total"],  # Numeric for regular rows
+                "total_advance": row["total_advance"],  # Numeric for regular rows
+                "outstanding_amount": row["outstanding_amount"]  # Numeric for regular rows
             })
-            grouped_data[cust]["outstanding_amount"] += row["outstanding_amount"] or 0
-            grouped_data[cust]["rounded_total"] += row["rounded_total"] or 0
-            grouped_data[cust]["total_advance"] += row["total_advance"] or 0
+            grouped_data[cat]["outstanding_amount"] += row["outstanding_amount"] or 0
+            grouped_data[cat]["rounded_total"] += row["rounded_total"] or 0
+            grouped_data[cat]["total_advance"] += row["total_advance"] or 0
 
-        for cust, cust_data in grouped_data.items():
-            result.extend(cust_data["rows"])
+        for cat, cat_data in grouped_data.items():
+            result.extend(cat_data["rows"])
             total_row = {
-                "customer": f"<b>{cust}</b>",
+                "category": f"<b>{cat}</b>",  # Bold category name
+                "customer": "",
                 "sales_person": "",
-                "category": "",
                 "name": "",
                 "posting_date": "",
                 "branch": "",
-                "outstanding_amount": cust_data["outstanding_amount"],
-                "rounded_total": cust_data["rounded_total"],
-                "total_advance": cust_data["total_advance"],
+                "outstanding_amount": f"<b>{cat_data['outstanding_amount']}</b>",  # Bold total
+                "rounded_total": f"<b>{cat_data['rounded_total']}</b>",  # Bold total
+                "total_advance": f"<b>{cat_data['total_advance']}</b>"  # Bold total
             }
             result.append(total_row)
     else:
