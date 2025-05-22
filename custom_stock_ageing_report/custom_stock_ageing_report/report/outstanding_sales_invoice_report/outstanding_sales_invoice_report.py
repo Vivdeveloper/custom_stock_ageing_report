@@ -232,6 +232,10 @@ def execute(filters=None):
         if credit_days_left_filter and not filter_match:
             continue
 
+        # When group_by_customer is checked, only include overdue invoices
+        if group_by_customer and credit_days_left >= 0:
+            continue
+
         # Calculate credit limit
         if si.credit_category == si.category:
             credit_limit_combined = (
